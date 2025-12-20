@@ -1,0 +1,36 @@
+services:
+  fetcher:
+    build:
+      context: fetcher
+      dockerfile: Dockerfile
+    container_name: funding-cmma-fetcher
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    restart: always
+
+  api:
+    build:
+      context: api
+      dockerfile: Dockerfile
+    container_name: funding-cmma-api
+    depends_on:
+      - fetcher
+    volumes:
+      - ./data:/app/data
+    restart: always
+
+  nginx:
+    image: docker.io/library/nginx:latest
+    build:
+      context: nginx
+      dockerfile: Dockerfile
+    container_name: funding-cmma-nginx
+    depends_on:
+      - api
+    ports:
+      - "8002:80"
+    restart: always
+
