@@ -20,6 +20,8 @@ services:
       - fetcher
     volumes:
       - ./data:/app/data
+    env_file:
+      - .env
     restart: always
 
   nginx:
@@ -33,4 +35,3 @@ services:
     ports:
       - "8002:80"
     restart: always
-

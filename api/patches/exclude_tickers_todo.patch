@@ -1,0 +1,74 @@
+diff --git a/crud.py b/crud.py
+index d7be161..bcfd23e 100644
+--- a/crud.py
++++ b/crud.py
+@@ -1,5 +1,5 @@
+ from sqlalchemy.orm import Session
+-from typing import List, Optional
++from typing import List, Optional, Set
+ from models import FundingRate
+ from sqlalchemy import func, text, case, literal_column
+ 
+@@ -8,7 +8,8 @@ def get_funding_rates(
+     direction: str,
+     sort: str,
+     limit: int,
+-    utilization_gte: Optional[float]
++    utilization_gte: Optional[float],
++    exclude_tickers: Optional[Set[str]] = None
+ ) -> List[FundingRate]:
+     """
+     指定された条件に基づき、最新のFunding Rateを持つ銘柄のリストを取得します。
+@@ -43,6 +44,10 @@ def get_funding_rates(
+     elif direction == "negative":
+         query = query.filter(FundingRate.funding_rate < 0)
+ 
++    # 除外シンボルを適用
++    if exclude_tickers:
++        query = query.filter(~FundingRate.symbol.in_(exclude_tickers))
++
+     # utilization_gte でフィルタリング
+     if utilization_gte is not None:
+         query = query.filter(utilization_expr >= utilization_gte)
+diff --git a/main.py b/main.py
+index 9d7a66f..453f485 100644
+--- a/main.py
++++ b/main.py
+@@ -2,8 +2,9 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
+ from fastapi.responses import JSONResponse
+ from fastapi.exceptions import RequestValidationError
+ from sqlalchemy.orm import Session
+-from typing import List, Optional
++from typing import List, Optional, Set
+ from enum import Enum
++import os
+ 
+ import crud
+ import schemas
+@@ -17,6 +18,16 @@ app = FastAPI(
+     openapi_url="/funding-rates/openapi.json"
+ )
+ 
++
++def _parse_csv_tickers(raw_value: str) -> Set[str]:
++    return {
++        ticker.strip().upper()
++        for ticker in raw_value.split(",")
++        if ticker.strip()
++    }
++
++
++EXCLUDE_TICKERS = _parse_csv_tickers(os.getenv("EXCLUDE_TICKERS", ""))
+ @app.on_event("startup")
+ def on_startup():
+     init_db() # 起動時にデータベースを初期化
+@@ -95,7 +106,8 @@ def get_funding_rates(
+         direction=direction.value,
+         sort=sort.value,
+         limit=limit,
+-        utilization_gte=utilization_gte
++        utilization_gte=utilization_gte,
++        exclude_tickers=EXCLUDE_TICKERS
+     )
+ 
+     funding_rate_data = [

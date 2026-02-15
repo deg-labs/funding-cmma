@@ -1,0 +1,50 @@
+diff --git a/config.py b/config.py
+index fce4aa0..88bd934 100644
+--- a/config.py
++++ b/config.py
+@@ -4,6 +4,7 @@ import logging
+ from logging.handlers import RotatingFileHandler
+ from pathlib import Path
+ from dotenv import load_dotenv
++from typing import Set
+ 
+ # These paths are assuming the container's file structure.
+ LOG_DIR = Path("/app/logs")
+@@ -23,6 +24,15 @@ class AppConfig:
+         self.funding_rate_threshold = float(os.getenv("FUNDING_RATE_THRESHOLD", "0.001")) # 0.1% = 0.001
+         self.funding_rate_history_limit = int(os.getenv("FUNDING_RATE_HISTORY_LIMIT", "10"))
+         self.max_notifications = int(os.getenv("MAX_NOTIFICATIONS", "30"))
++        self.exclude_tickers = self._parse_csv_tickers(os.getenv("EXCLUDE_TICKERS", ""))
++
++    @staticmethod
++    def _parse_csv_tickers(raw_value: str) -> Set[str]:
++        return {
++            ticker.strip().upper()
++            for ticker in raw_value.split(",")
++            if ticker.strip()
++        }
+ 
+ def setup_logging(config: AppConfig) -> logging.Logger:
+     LOG_DIR.mkdir(exist_ok=True)
+diff --git a/service.py b/service.py
+index 02abf64..9789d24 100644
+--- a/service.py
++++ b/service.py
+@@ -24,6 +24,17 @@ class DataFetchService:
+                 self.logger.error("銘柄シンボルが取得できず、データ取得をスキップします。")
+                 return
+ 
++            if self.config.exclude_tickers:
++                original_count = len(symbols)
++                symbols = [symbol for symbol in symbols if symbol not in self.config.exclude_tickers]
++                excluded_count = original_count - len(symbols)
++                self.logger.info(
++                    f"除外設定により {excluded_count} 銘柄をスキップ (EXCLUDE_TICKERS={sorted(self.config.exclude_tickers)})"
++                )
++                if not symbols:
++                    self.logger.warning("除外設定の結果、取得対象シンボルが0件になったためこのサイクルをスキップします。")
++                    return
++
+             tickers = await self.client.get_tickers(session)
+             if not tickers:
+                 self.logger.warning("ティッカー情報が取得できませんでした。一部データが欠落する可能性があります。")
