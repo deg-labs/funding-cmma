@@ -14,16 +14,27 @@ class AppConfig:
     def __init__(self, dotenv_path=None):
         if dotenv_path:
             load_dotenv(dotenv_path)
+        else:
+            load_dotenv()
 
+        self.exchange = os.getenv("EXCHANGE", "bybit").lower()
         self.log_max_size_mb = int(os.getenv("LOG_MAX_SIZE_MB", "10"))
         self.concurrency_limit = int(os.getenv("CONCURRENCY_LIMIT", "60"))
         self.fetch_interval_seconds = int(os.getenv("FETCH_INTERVAL_SECONDS", "300"))
-        self.base_url = "https://api.bybit.com"
+        self.bitget_product_type = os.getenv("BITGET_PRODUCT_TYPE", "usdt-futures")
+        self.base_url = self._get_base_url()
 
         # Funding Rate Specific Settings
         self.funding_rate_threshold = float(os.getenv("FUNDING_RATE_THRESHOLD", "0.001")) # 0.1% = 0.001
         self.funding_rate_history_limit = int(os.getenv("FUNDING_RATE_HISTORY_LIMIT", "10"))
         self.max_notifications = int(os.getenv("MAX_NOTIFICATIONS", "30"))
+
+    def _get_base_url(self) -> str:
+        if self.exchange == "bybit":
+            return os.getenv("BYBIT_BASE_URL", "https://api.bybit.com")
+        if self.exchange == "bitget":
+            return os.getenv("BITGET_BASE_URL", "https://api.bitget.com")
+        raise ValueError("EXCHANGE must be either 'bybit' or 'bitget'")
 
 def setup_logging(config: AppConfig) -> logging.Logger:
     LOG_DIR.mkdir(exist_ok=True)
@@ -43,7 +54,7 @@ def setup_logging(config: AppConfig) -> logging.Logger:
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
 
-    logger = logging.getLogger("BybitFetcher")
+    logger = logging.getLogger(f"{config.exchange.capitalize()}Fetcher")
     logger.setLevel(logging.INFO)
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)

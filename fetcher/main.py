@@ -4,7 +4,7 @@ import traceback
 from datetime import datetime
 
 from config import AppConfig, setup_logging, DB_FILE
-from client import BybitClient
+from client import BitgetClient, BybitClient
 from repository import DatabaseRepository
 from service import DataFetchService
 
@@ -12,10 +12,9 @@ async def main():
     logger = None
     repo = None
     try:
-        print(f"Bybit非同期データ取得・保存バッチを開始 - {datetime.now().isoformat()}")
-
         # 1. Configuration
         config = AppConfig()
+        print(f"{config.exchange} 非同期データ取得・保存バッチを開始 - {datetime.now().isoformat()}")
 
         # 2. Logging
         logger = setup_logging(config)
@@ -24,7 +23,12 @@ async def main():
         repo = DatabaseRepository(DB_FILE, logger)
 
         # 4. API Client
-        client = BybitClient(config.base_url, logger)
+        if config.exchange == "bybit":
+            client = BybitClient(config.base_url, logger)
+        elif config.exchange == "bitget":
+            client = BitgetClient(config.base_url, logger, config.bitget_product_type)
+        else:
+            raise ValueError("EXCHANGE must be either 'bybit' or 'bitget'")
 
         # 5. Service
         service = DataFetchService(client, repo, config, logger)

@@ -1,15 +1,26 @@
 import logging
 import time
 import asyncio
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Protocol, Optional
 import aiohttp
 
-from client import BybitClient
 from repository import DatabaseRepository
 from config import AppConfig
 
+class FundingRateClient(Protocol):
+    timeout: aiohttp.ClientTimeout
+
+    async def get_all_linear_symbols(self, session: aiohttp.ClientSession) -> List[str]:
+        ...
+
+    async def get_tickers(self, session: aiohttp.ClientSession) -> Dict[str, Dict[str, Any]]:
+        ...
+
+    async def get_funding_history(self, session: aiohttp.ClientSession, symbol: str, limit: int = 200) -> Optional[List[Dict[str, Any]]]:
+        ...
+
 class DataFetchService:
-    def __init__(self, client: BybitClient, repository: DatabaseRepository, config: AppConfig, logger: logging.Logger):
+    def __init__(self, client: FundingRateClient, repository: DatabaseRepository, config: AppConfig, logger: logging.Logger):
         self.client = client
         self.repository = repository
         self.config = config
