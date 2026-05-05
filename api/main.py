@@ -11,7 +11,7 @@ from database import engine, get_db, init_db # init_dbをインポート
 
 app = FastAPI(
     title="CMMA Funding Rate API",
-    description="Bybitの異常なFunding Rateを取得するAPI",
+    description="取引所の異常なFunding Rateを取得するAPI",
     version="3.0.0",
     docs_url="/funding-rates/docs",
     openapi_url="/funding-rates/openapi.json"
