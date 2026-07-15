@@ -10,6 +10,11 @@ services:
     env_file:
       - .env
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   api:
     build:
@@ -21,6 +26,11 @@ services:
     volumes:
       - ./data:/app/data
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
 
   nginx:
     image: docker.io/library/nginx:latest
@@ -33,4 +43,9 @@ services:
     ports:
       - "8002:80"
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
 
